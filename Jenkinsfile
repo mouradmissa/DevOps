@@ -2,18 +2,43 @@ pipeline {
     agent any
 
     stages {
-
-        stage('MAVEN') {
-            steps {
-                sh "mvn -version"
+        stage('Checkout') {                     
+                checkout scm
             }
         }
 
-        stage('GIT') {
+        stage('Maven Build') {               
             steps {
-                git branch: 'main', url: 'https://github.com/mouradmissa/DevOps.git'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
+        stage('Docker Build') {                 
+            steps {
+                sh 'docker build -t missaouimourad/student-management:latest .'
+            }
+        }
+
+        stage('Docker Push') {                 
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-cred',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh 'docker push missaouimourad/student-management:latest'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline CI/CD complète réussie ! Image publiée sur https://hub.docker.com/r/missaouimourad/student-management'
+        }
+        failure {
+            echo 'Pipeline échouée – vérifiez les logs'
+        }
     }
 }
