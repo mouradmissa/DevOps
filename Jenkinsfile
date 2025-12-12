@@ -1,0 +1,75 @@
+pipeline {
+    agent any
+
+    // Outils installés dans Jenkins (à configurer une seule fois dans Manage Jenkins → Tools)
+    tools {
+        jdk 'JAVA_HOME'      // Doit exister dans Jenkins (Java 17)
+        maven 'Maven3'       // Doit exister dans Jenkins
+    }
+
+    // Vérifie toutes les 2 minutes s'il y a un nouveau commit sur ton repo
+    triggers { pollSCM('H/2 * * * *') }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/mouradmissa/DevOps.git'
+            }
+        }
+
+        stage('Maven Build') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh 'docker build -t missaouimourad/student-management:latest .'
+                sh 'docker tag missaouimourad/student-management:latest missaouimourad/student-management:${BUILD_NUMBER}'
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-cred',           // Le même que tu as déjà créé
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS')]) {
+                    sh 'echo $PASS | docker login -u $USER --password-stdin'
+                    sh 'docker push missaouimourad/student-management:latest'
+                    sh 'docker push missaouimourad/student-management:${BUILD_NUMBER}'
+                }
+            }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh 'kubectl apply -f mysql-deployment.yaml'
+                sh 'kubectl apply -f spring-deployment.yaml'
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                    sh '''
+                    mvn sonar:sonar \
+                      -Dsonar.projectKey=student-management \
+                      -Dsonar.host.url=http://192.168.33.10:9000 \
+                      -Dsonar.token=${SONAR_TOKEN}
+                    '''
+                }
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo 'Pipeline CI/CD complète terminée avec succès ! Image + Kubernetes + SonarQube OK ! Image publiée sur https://hub.docker.com/r/missaouimourad/student-management'
+        }
+        failure {
+            echo 'Échec de la pipeline – vérifiez les logs'
+        }
+    }
+}
