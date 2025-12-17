@@ -50,6 +50,16 @@ pipeline {
                 sh 'kubectl apply -f spring-deployment.yaml'
             }
         }
+stage('SonarQube Analysis') {
+    environment {
+        SONAR_HOST_URL = 'http://192.168.33.10:9000'  // ton serveur SonarQube
+    }
+    steps {
+        withSonarQubeEnv('SonarQube') {  // le nom que tu as mis dans la config Jenkins
+            sh 'mvn sonar:sonar'
+        }
+    }
+}
         
     }
 
