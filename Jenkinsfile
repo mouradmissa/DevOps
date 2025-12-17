@@ -43,19 +43,7 @@ pipeline {
                 }
             }
         }
-     stage('Start Minikube') {
-    steps {
-        sh '''
-            # Si Minikube est déjà en cours, ça ne fait rien de grave
-            if ! minikube status | grep -q "host: Running"; then
-                echo "Démarrage de Minikube..."
-                minikube start --driver=docker  # adapte le driver si tu utilises virtualbox, none, etc.
-            else
-                echo "Minikube est déjà démarré."
-            fi
-        '''
-    }
-}
+    
         stage('Deploy to Kubernetes') {
             steps {
                 sh 'kubectl apply -f mysql-deployment.yaml'
