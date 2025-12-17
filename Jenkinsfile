@@ -8,7 +8,7 @@ pipeline {
     }
 
     // Vérifie toutes les 2 minutes s'il y a un nouveau commit sur ton repo
-    triggers { pollSCM('H/2 * * * *') }
+    triggers { pollSCM('H/10 * * * *') }
 
     stages {
         stage('Checkout') {
