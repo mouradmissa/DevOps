@@ -49,19 +49,7 @@ pipeline {
                 sh 'kubectl apply -f spring-deployment.yaml'
             }
         }
-        stage('SonarQube Analysis') {
-            steps {
-                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    sh '''
-                    mvn sonar:sonar \
-                      -Dsonar.projectKey=student-management \
-                      -Dsonar.host.url=http://192.168.33.10:9000 \
-                      -Dsonar.token=${SONAR_TOKEN}
-                    '''
-                }
-            }
-        }
-
+        
     }
 
     post {
